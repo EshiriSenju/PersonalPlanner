@@ -1,10 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, Button, StyleSheet, FlatList, Text } from 'react-native';
+import { View, Button, StyleSheet, FlatList, Text, TouchableOpacity } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import DebtForm from '../components/DebtForm';
 import IncomeForm from '../components/IncomeForm';
 import AccountForm from '../components/AccountForm';
-import { addDebt, updateDebt, deleteDebt, addAccount, addIncomeStream, updateIncomeStream, deleteIncomeStream, loadInitialData } from '../redux/debtsSlice';
+import { useNavigation } from '@react-navigation/native';
+import {
+  addDebt,
+  updateDebt,
+  deleteDebt,
+  addAccount,
+  addIncomeStream,
+  updateIncomeStream,
+  deleteIncomeStream,
+  loadInitialData,
+} from '../redux/debtsSlice';
 
 const DebtScreen = () => {
   const [showDebtForm, setShowDebtForm] = useState(false);
@@ -14,13 +24,16 @@ const DebtScreen = () => {
   const [editingIncome, setEditingIncome] = useState(null);
 
   const dispatch = useDispatch();
-  const debts = useSelector((state) => state.debts.debts);
+  const navigation = useNavigation(); // Initialize navigation
   const accounts = useSelector((state) => state.debts.accounts);
-  const incomeStreams = useSelector((state) => state.debts.incomeStreams);
 
   useEffect(() => {
     dispatch(loadInitialData());
   }, [dispatch]);
+
+  const handleAccountClick = (account) => {
+    navigation.navigate('AccountDetails', { account });
+  };
 
   const handleAddDebt = (debt) => {
     if (editingDebt) {
@@ -32,10 +45,6 @@ const DebtScreen = () => {
     setEditingDebt(null);
   };
 
-  const handleDeleteDebt = (debtId) => {
-    dispatch(deleteDebt(debtId));
-  };
-
   const handleaddIncomeStream = (incomeStream) => {
     if (editingIncome) {
       dispatch(updateIncomeStream(incomeStream));
@@ -44,10 +53,6 @@ const DebtScreen = () => {
     }
     setShowIncomeForm(false);
     setEditingIncome(null);
-  };
-
-  const handledeleteIncomeStream = (incomeId) => {
-    dispatch(deleteIncomeStream(incomeId));
   };
 
   const handleAddAccount = (account) => {
@@ -67,9 +72,11 @@ const DebtScreen = () => {
         data={accounts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.accountItem}>
-            <Text>{item.name} - ${item.balance.toFixed(2)}</Text>
-          </View>
+          <TouchableOpacity onPress={() => handleAccountClick(item)}>
+            <View style={styles.accountItem}>
+              <Text>{item.name} - ${item.balance.toFixed(2)}</Text>
+            </View>
+          </TouchableOpacity>
         )}
       />
       <Button title="Add Account" onPress={() => setShowAccountForm(true)} />
@@ -108,45 +115,9 @@ const DebtScreen = () => {
           }}
         />
       ) : (
-        <>
-          <FlatList
-            data={debts}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.debtItem}>
-                <Text>{item.description} - ${item.amount.toFixed(2)}</Text>
-                <Text>Status: {item.status}</Text>
-                <Button
-                  title="Edit"
-                  onPress={() => {
-                    setEditingDebt(item);
-                    setShowDebtForm(true);
-                  }}
-                />
-                <Button title="Delete" onPress={() => handleDeleteDebt(item.id)} />
-              </View>
-            )}
-            ListHeaderComponent={renderHeader}
-          />
-          <FlatList
-            data={incomeStreams}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.debtItem}>
-                <Text>{item.description} - ${item.amount.toFixed(2)}</Text>
-                <Text>Status: {item.status}</Text>
-                <Button
-                  title="Edit"
-                  onPress={() => {
-                    setEditingIncome(item);
-                    setShowIncomeForm(true);
-                  }}
-                />
-                <Button title="Delete" onPress={() => handledeleteIncomeStream(item.id)} />
-              </View>
-            )}
-          />
-        </>
+        <FlatList
+          ListHeaderComponent={renderHeader}
+        />
       )}
     </View>
   );
@@ -172,13 +143,6 @@ const styles = StyleSheet.create({
   accountItem: {
     padding: 10,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-  },
-  debtItem: {
-    padding: 10,
-    margin: 10,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,

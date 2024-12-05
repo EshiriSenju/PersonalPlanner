@@ -6,12 +6,16 @@ import {
   loadDebts,
   saveIncome,
   loadIncome,
+  saveTransactionHistory,
+  loadTransactionHistory,
+  addTransactionRecord,
 } from '../services/financeService';
 
 const initialState = {
   accounts: [],
   debts: [],
   incomeStreams: [],
+  transactionHistory: [],
   loading: true,
 };
 
@@ -34,6 +38,11 @@ const debtsSlice = createSlice({
       state.incomeStreams = action.payload;
       state.loading = false;
     },
+    setTransactionHistory(state, action) {
+      console.log('Setting transaction history:', action.payload);
+      state.transactionHistory = action.payload;
+      state.loading = false;
+    },
     addAccount(state, action) {
       console.log('Adding new account:', action.payload);
       state.accounts.push(action.payload);
@@ -50,9 +59,24 @@ const debtsSlice = createSlice({
     },
     deleteDebt(state, action) {
       console.log('Deleting debt with ID:', action.payload);
+      const deletedDebt = state.debts.find((debt) => debt.id === action.payload);
       state.debts = state.debts.filter((debt) => debt.id !== action.payload);
       saveDebts([...state.debts])
-        .then(() => console.log('Debts saved successfully after deleting debt:', state.debts))
+        .then(() => {
+          console.log('Debts saved successfully after deleting debt:', state.debts);
+          if (deletedDebt) {
+            // Add to transaction history
+            const transaction = {
+              id: `transaction-${Date.now()}`,
+              type: 'debt-deletion',
+              amount: deletedDebt.amount,
+              description: deletedDebt.description,
+              date: new Date().toISOString(),
+              linkedAccountId: deletedDebt.accountId,
+            };
+            addTransactionRecord(transaction);
+          }
+        })
         .catch((error) => console.error('Error saving debts after deleting debt:', error));
     },
     addIncomeStream(state, action) {
@@ -88,9 +112,24 @@ const debtsSlice = createSlice({
     },
     deleteIncomeStream(state, action) {
       console.log('Deleting income stream with ID:', action.payload);
+      const deletedIncome = state.incomeStreams.find((stream) => stream.id === action.payload);
       state.incomeStreams = state.incomeStreams.filter((stream) => stream.id !== action.payload);
       saveIncome([...state.incomeStreams])
-        .then(() => console.log('Income streams saved successfully after deleting:', state.incomeStreams))
+        .then(() => {
+          console.log('Income streams saved successfully after deleting:', state.incomeStreams);
+          if (deletedIncome) {
+            // Add to transaction history
+            const transaction = {
+              id: `transaction-${Date.now()}`,
+              type: 'income-deletion',
+              amount: deletedIncome.amount,
+              description: deletedIncome.description,
+              date: new Date().toISOString(),
+              linkedAccountId: deletedIncome.accountId,
+            };
+            addTransactionRecord(transaction);
+          }
+        })
         .catch((error) => console.error('Error saving income streams after deleting:', error));
     },
   },
@@ -100,6 +139,7 @@ export const {
   setAccounts,
   setDebts,
   setIncomeStreams,
+  setTransactionHistory,
   addAccount,
   addDebt,
   deleteDebt,
@@ -116,10 +156,12 @@ export const loadInitialData = () => async (dispatch) => {
     const accountsData = await loadAccounts();
     const debtsData = await loadDebts();
     const incomeData = await loadIncome();
-    console.log('Loaded data from storage:', { accountsData, debtsData, incomeData });
+    const transactionHistoryData = await loadTransactionHistory();
+    console.log('Loaded data from storage:', { accountsData, debtsData, incomeData, transactionHistoryData });
     dispatch(setAccounts(accountsData));
     dispatch(setDebts(debtsData));
     dispatch(setIncomeStreams(incomeData));
+    dispatch(setTransactionHistory(transactionHistoryData));
   } catch (error) {
     console.error('Error loading data:', error);
   }

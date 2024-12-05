@@ -15,6 +15,10 @@ import MediaPreviewScreen from './screens/MediaPreviewScreen'; // New import
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
+import { checkAndProcessDueTransactions } from './services/financeService'; // Import check function
+import { useAppState } from '@react-native-community/hooks'; // Import App State Hook
+import AccountDetailScreen from './screens/AccountDetailScreen'; // Import the new screen
+import FilteredDebtIncomeScreen from './screens/FilteredDebtIncomeScreen'; // Import the filtered screen
 
 // Configure the Redux store
 const store = configureStore({
@@ -36,7 +40,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Bottom Tab Navigator to include Tasks, Debts, and Storage Viewer screens
+// Bottom Tab Navigator to include Tasks, Debts, Storage Viewer, and Filtered Debt/Income screens
 const MainTabs = () => {
   return (
     <Tab.Navigator
@@ -50,6 +54,8 @@ const MainTabs = () => {
             iconName = focused ? 'cash' : 'cash-outline';
           } else if (route.name === 'Storage Viewer') {
             iconName = focused ? 'folder' : 'folder-outline';
+          } else if (route.name === 'Filtered View') {
+            iconName = focused ? 'swap-horizontal' : 'swap-horizontal-outline';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -61,11 +67,14 @@ const MainTabs = () => {
       <Tab.Screen name="Tasks" component={TasksScreen} />
       <Tab.Screen name="Debts" component={DebtScreen} />
       <Tab.Screen name="Storage Viewer" component={TaskStorageViewer} />
+      <Tab.Screen name="Filtered View" component={FilteredDebtIncomeScreen} />
     </Tab.Navigator>
   );
 };
 
 const App = () => {
+  const appState = useAppState();
+
   useEffect(() => {
     // Request notification permissions
     const requestPermissions = async () => {
@@ -81,6 +90,17 @@ const App = () => {
 
     requestPermissions();
   }, []);
+
+  // Check and process due transactions on app load and resume
+  useEffect(() => {
+    const processDueTransactions = async () => {
+      await checkAndProcessDueTransactions();
+    };
+
+    if (appState === 'active') {
+      processDueTransactions();
+    }
+  }, [appState]);
 
   return (
     <Provider store={store}>
@@ -105,6 +125,11 @@ const App = () => {
             name="MediaPreview"
             component={MediaPreviewScreen}
             options={{ title: 'Media Preview' }}
+          />
+          <Stack.Screen
+            name="AccountDetails"
+            component={AccountDetailScreen}
+            options={{ title: 'Account Details' }}
           />
         </Stack.Navigator>
       </NavigationContainer>
